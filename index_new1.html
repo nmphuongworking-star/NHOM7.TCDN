@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GROUP7.TCDN - Quản lý tài chính doanh nghiệp</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="bg-gradients"></div>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo logo-svg">
+        <svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true">
+          <defs>
+            <linearGradient id="lgWallet" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#b3ff4a"/>
+              <stop offset="45%" stop-color="#34d399"/>
+              <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+            <linearGradient id="lgCoin" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffe066"/>
+              <stop offset="100%" stop-color="#fb923c"/>
+            </linearGradient>
+          </defs>
+          <rect x="6" y="13" width="34" height="26" rx="7" fill="url(#lgWallet)"/>
+          <rect x="6" y="13" width="34" height="26" rx="7" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/>
+          <path d="M27 25 h13 a3 3 0 0 1 3 3 v3 a3 3 0 0 1 -3 3 h-13 a4.5 4.5 0 0 1 0 -9 z" fill="#0b1224"/>
+          <circle cx="33" cy="29.5" r="3.4" fill="url(#lgCoin)"/>
+          <text x="33" y="31.4" font-size="4.6" font-weight="700" text-anchor="middle" fill="#7c4a00">₫</text>
+        </svg>
+      </div>
+      <div>
+        <h1>GROUP7<span style="color:var(--neon-green)">.TCDN</span></h1>
+        <p>Tài chính doanh nghiệp</p>
+      </div>
+    </div>
+    <div class="account-box">
+      <label class="acc-label">Tài khoản doanh nghiệp</label>
+      <div class="acc-row">
+        <select id="account-select"></select>
+        <button id="btn-new-account" class="btn-secondary btn-icon" title="Tạo tài khoản mới">＋</button>
+      </div>
+      <div class="acc-row">
+        <input type="text" id="current-user" placeholder="Tên người dùng" />
+        <button id="btn-collab" class="btn-secondary btn-icon" title="Cộng tác & lịch sử">👥</button>
+      </div>
+    </div>
+
+    <nav>
+      <button class="nav-btn active" data-tab="dashboard"><span>📊</span> Tổng quan</button>
+      <button class="nav-btn" data-tab="income"><span>💰</span> Quản lý thu</button>
+      <button class="nav-btn" data-tab="expense"><span>💸</span> Quản lý chi</button>
+      <button class="nav-btn" data-tab="cashflow"><span>📈</span> Dòng tiền</button>
+      <button class="nav-btn" data-tab="investment"><span>🚀</span> Mô phỏng đầu tư</button>
+      <button class="nav-btn" data-tab="advice"><span>💡</span> Khuyến nghị DN</button>
+    </nav>
+    <div class="data-tools">
+      <div class="currency-pick">
+        <label>Hiển thị bằng</label>
+        <select id="display-currency"></select>
+      </div>
+      <button id="btn-export" class="btn-secondary">⬇ Xuất JSON</button>
+      <label class="btn-secondary file-label">
+        ⬆ Nhập JSON
+        <input type="file" id="file-import" accept="application/json" hidden />
+      </label>
+      <button id="btn-reset" class="btn-danger">🗑 Xoá tất cả</button>
+      <p class="rates-note" id="rates-note">Đang tải tỷ giá…</p>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section class="tab active" id="tab-dashboard">
+      <header class="page-header">
+        <h2>Tổng quan <span class="accent-green" id="dash-month-label">tháng</span></h2>
+      </header>
+
+      <div class="trio-cards">
+        <div class="glass-card stat-card green-glow">
+          <span class="stat-label">Tổng thu (tháng)</span>
+          <span class="stat-value green" id="dash-income">0 <small>VND</small></span>
+        </div>
+        <div class="glass-card stat-card purple-glow">
+          <span class="stat-label">Tổng chi (tháng)</span>
+          <span class="stat-value purple" id="dash-expense">0 <small>VND</small></span>
+        </div>
+        <div class="glass-card stat-card blue-glow">
+          <span class="stat-label">Tổng dòng tiền ròng (lũy kế đến thời điểm hiện tại)</span>
+          <span class="stat-value blue" id="dash-balance">0 <small>VND</small></span>
+        </div>
+      </div>
+
+      <h3 class="section-title">Biến động thu/chi — 12 tháng gần nhất</h3>
+      <div class="glass-card">
+        <div class="period-nav">
+          <button class="nav-arrow" data-nav="dash" data-dir="-1">‹</button>
+          <span class="period-range" id="dash-range">—</span>
+          <button class="nav-arrow" data-nav="dash" data-dir="1">›</button>
+        </div>
+        <div class="chart-box tall"><canvas id="chart-variation"></canvas></div>
+        <div class="chart-legend center">
+          <span><i class="dot green"></i> Thu</span>
+          <span><i class="dot purple"></i> Chi</span>
+        </div>
+        <table class="data-table compact">
+          <thead><tr><th>Tháng</th><th class="num">Thu</th><th class="num">Chi</th><th class="num">Ròng</th></tr></thead>
+          <tbody id="tbody-dash-variation"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== INCOME ===== -->
+    <section class="tab" id="tab-income">
+      <header class="page-header sub">
+        <button class="back-btn" data-jump="dashboard">←</button>
+        <h2>Quản lý thu</h2>
+      </header>
+
+      <div class="period-nav">
+        <button class="nav-arrow" data-nav="income-m" data-dir="-1">‹</button>
+        <span class="period-range" id="income-month-pick">—</span>
+        <button class="nav-arrow" data-nav="income-m" data-dir="1">›</button>
+      </div>
+
+      <div class="duo-cards">
+        <div class="glass-card stat-banner green-glow">
+          <div class="stat-icon green">💰</div>
+          <div class="stat-meta">
+            <span class="stat-label">Tổng thu <span id="income-month-label">tháng</span></span>
+            <span class="stat-value green" id="income-total">0 <small>VND</small></span>
+          </div>
+        </div>
+        <div class="glass-card stat-banner blue-glow">
+          <div class="stat-icon green">📈</div>
+          <div class="stat-meta">
+            <span class="stat-label">Tổng thu (lũy kế đến hiện tại)</span>
+            <span class="stat-value blue" id="income-cumulative">0 <small>VND</small></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card chart-card">
+        <div class="donut-wrap">
+          <canvas id="chart-income-donut" width="280" height="280"></canvas>
+          <div class="donut-center"><span id="income-donut-pct">0%</span></div>
+        </div>
+        <div class="cat-legend" id="income-cat-list"></div>
+      </div>
+
+      <button class="btn-pill" id="btn-add-income">✎ Điều chỉnh nguồn thu</button>
+
+      <h3 class="section-title">Biến động thu — 12 tháng gần nhất</h3>
+      <div class="glass-card">
+        <div class="period-nav">
+          <button class="nav-arrow" data-nav="income-12" data-dir="-1">‹</button>
+          <span class="period-range" id="income-12-range">—</span>
+          <button class="nav-arrow" data-nav="income-12" data-dir="1">›</button>
+        </div>
+        <div class="trio-mini">
+          <div><span class="stat-label">Tổng 12T</span><span class="stat-value-sm" id="income-12-total">0</span></div>
+          <div><span class="stat-label">TB/Tháng</span><span class="stat-value-sm purple" id="income-12-avg">0</span></div>
+          <div><span class="stat-label">So tháng trước</span><span class="stat-value-sm blue" id="income-mom">—</span></div>
+        </div>
+        <div class="chart-box"><canvas id="chart-income-12m"></canvas></div>
+        <table class="data-table compact">
+          <thead><tr><th>Tháng</th><th class="num">Thu</th><th class="num">Δ%</th></tr></thead>
+          <tbody id="tbody-income-12"></tbody>
+        </table>
+      </div>
+
+      <h3 class="section-title">Danh sách khoản thu</h3>
+      <div class="glass-card">
+        <table class="data-table"><thead>
+          <tr><th>Ngày</th><th>Tên</th><th>Danh mục</th><th>Số tiền</th><th>Ghi chú</th><th></th></tr>
+        </thead><tbody id="tbody-income"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ===== EXPENSE ===== -->
+    <section class="tab" id="tab-expense">
+      <header class="page-header sub">
+        <button class="back-btn" data-jump="dashboard">←</button>
+        <h2>Quản lý chi</h2>
+      </header>
+
+      <div class="period-nav">
+        <button class="nav-arrow" data-nav="expense-m" data-dir="-1">‹</button>
+        <span class="period-range" id="expense-month-pick">—</span>
+        <button class="nav-arrow" data-nav="expense-m" data-dir="1">›</button>
+      </div>
+
+      <div class="duo-cards">
+        <div class="glass-card stat-banner purple-glow">
+          <div class="stat-icon purple">💸</div>
+          <div class="stat-meta">
+            <span class="stat-label">Tổng chi <span id="expense-month-label">tháng</span></span>
+            <span class="stat-value purple" id="expense-total">0 <small>VND</small></span>
+          </div>
+        </div>
+        <div class="glass-card stat-banner blue-glow">
+          <div class="stat-icon purple">📉</div>
+          <div class="stat-meta">
+            <span class="stat-label">Tổng chi (lũy kế đến hiện tại)</span>
+            <span class="stat-value blue" id="expense-cumulative">0 <small>VND</small></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card chart-card">
+        <div class="donut-wrap">
+          <canvas id="chart-expense-donut" width="280" height="280"></canvas>
+          <div class="donut-center"><span id="expense-donut-pct">0%</span></div>
+        </div>
+        <div class="cat-legend" id="expense-cat-list"></div>
+      </div>
+
+      <button class="btn-pill" id="btn-add-expense">✎ Điều chỉnh khoản chi</button>
+
+      <h3 class="section-title">Biến động chi — 12 tháng gần nhất</h3>
+      <div class="glass-card">
+        <div class="period-nav">
+          <button class="nav-arrow" data-nav="expense-12" data-dir="-1">‹</button>
+          <span class="period-range" id="expense-12-range">—</span>
+          <button class="nav-arrow" data-nav="expense-12" data-dir="1">›</button>
+        </div>
+        <div class="trio-mini">
+          <div><span class="stat-label">Tổng 12T</span><span class="stat-value-sm" id="expense-12-total">0</span></div>
+          <div><span class="stat-label">TB/Tháng</span><span class="stat-value-sm purple" id="expense-12-avg">0</span></div>
+          <div><span class="stat-label">So tháng trước</span><span class="stat-value-sm blue" id="expense-mom">—</span></div>
+        </div>
+        <div class="chart-box"><canvas id="chart-expense-12m"></canvas></div>
+        <table class="data-table compact">
+          <thead><tr><th>Tháng</th><th class="num">Chi</th><th class="num">Δ%</th></tr></thead>
+          <tbody id="tbody-expense-12"></tbody>
+        </table>
+      </div>
+
+      <h3 class="section-title">Danh sách khoản chi</h3>
+      <div class="glass-card">
+        <table class="data-table"><thead>
+          <tr><th>Ngày</th><th>Tên</th><th>Danh mục</th><th>Số tiền</th><th>Ghi chú</th><th></th></tr>
+        </thead><tbody id="tbody-expense"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ===== CASHFLOW ===== -->
+    <section class="tab" id="tab-cashflow">
+      <header class="page-header sub">
+        <button class="back-btn" data-jump="dashboard">←</button>
+        <h2>Dòng tiền ròng</h2>
+      </header>
+
+      <div class="duo-cards">
+        <div class="glass-card stat-card blue-glow">
+          <span class="stat-label">Tiền ròng tháng <span id="cf-month-label">—</span></span>
+          <span class="stat-value blue" id="cf-month-net">0 <small>VND</small></span>
+          <div class="period-nav" style="margin-top:8px">
+            <button class="nav-arrow" data-nav="cashflow-month" data-dir="-1">‹</button>
+            <span class="period-range" id="cf-month-pick" style="min-width:140px">—</span>
+            <button class="nav-arrow" data-nav="cashflow-month" data-dir="1">›</button>
+          </div>
+        </div>
+        <div class="glass-card stat-card green-glow">
+          <span class="stat-label">Tổng dòng tiền ròng (lũy kế tới thời điểm hiện tại)</span>
+          <span class="stat-value green" id="cf-asset-total">0 <small>VND</small></span>
+          <small class="hint-inline">= tổng thu − tổng chi của tất cả các tháng</small>
+        </div>
+      </div>
+
+      <h3 class="section-title">So sánh dòng tiền — 12 tháng gần nhất</h3>
+      <div class="glass-card">
+        <div class="period-nav">
+          <button class="nav-arrow" data-nav="cashflow" data-dir="-1">‹</button>
+          <span class="period-range" id="cashflow-range">—</span>
+          <button class="nav-arrow" data-nav="cashflow" data-dir="1">›</button>
+        </div>
+        <div class="trio-mini">
+          <div><span class="stat-label">Ròng TB/Tháng</span><span class="stat-value-sm blue" id="cashflow-avg">0</span></div>
+          <div><span class="stat-label">So tháng trước</span><span class="stat-value-sm" id="cashflow-mom">—</span></div>
+          <div><span class="stat-label">Tổng ròng 12T</span><span class="stat-value-sm green" id="cashflow-sum">0</span></div>
+        </div>
+        <div class="chart-box tall"><canvas id="chart-cashflow"></canvas></div>
+        <div class="chart-legend center">
+          <span><i class="dot green"></i> Thu</span>
+          <span><i class="dot purple"></i> Chi</span>
+          <span><i class="dot blue"></i> Ròng</span>
+        </div>
+        <table class="data-table compact"><thead>
+          <tr><th>Tháng</th><th class="num">Tổng thu</th><th class="num">Tổng chi</th><th class="num">Ròng</th></tr>
+        </thead><tbody id="tbody-cashflow"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ===== INVESTMENT ===== -->
+    <section class="tab" id="tab-investment">
+      <header class="page-header sub">
+        <button class="back-btn" data-jump="dashboard">←</button>
+        <h2>Mô phỏng đầu tư dài hạn</h2>
+      </header>
+
+      <div class="duo-cards small">
+        <div class="glass-card">
+          <span class="stat-label">Tổng dòng tiền ròng</span>
+          <span class="stat-value-sm green" id="sim-total-asset">0</span>
+          <small class="hint-inline">= nguồn vốn khả dụng để phân bổ</small>
+        </div>
+        <div class="glass-card">
+          <span class="stat-label">Đã phân bổ đầu tư</span>
+          <span class="stat-value-sm blue" id="sim-allocated">0</span>
+        </div>
+        <div class="glass-card">
+          <span class="stat-label">Tiền mặt còn lại</span>
+          <span class="stat-value-sm" id="sim-cash-left">0</span>
+        </div>
+      </div>
+
+      <h3 class="section-title">Danh mục đầu tư</h3>
+      <div class="glass-card">
+        <p class="hint">Nhập số tiền hoặc % cho từng khoản. Tiền mặt tự cân bằng = dòng tiền ròng − tổng đã phân bổ. Cột "Đề xuất" gợi ý cách phân bổ tối ưu (mỗi khoản ≈10%).</p>
+        <div class="table-scroll">
+        <table class="data-table compact" id="table-allocation">
+          <thead><tr>
+            <th>Danh mục</th>
+            <th class="num">Số tiền</th>
+            <th class="num">%</th>
+            <th class="num">Đề xuất</th>
+            <th class="num">% kỳ vọng</th>
+          </tr></thead>
+          <tbody id="tbody-allocation"></tbody>
+        </table>
+        </div>
+        <div id="alloc-warning" class="alloc-warning" hidden></div>
+        <div class="confirm-bar">
+          <button class="btn-secondary" id="btn-alloc-suggest">✨ Áp dụng đề xuất</button>
+          <button class="btn-secondary" id="btn-alloc-clear">↺ Đặt lại (tất cả tiền mặt)</button>
+        </div>
+      </div>
+
+      <!-- chọn tháng ghi nhận giao dịch đầu tư -->
+      <div class="period-nav">
+        <button class="nav-arrow" data-nav="invest-month" data-dir="-1">‹</button>
+        <span class="period-range" id="invest-month-pick">—</span>
+        <button class="nav-arrow" data-nav="invest-month" data-dir="1">›</button>
+      </div>
+
+      <h3 class="section-title">Cổ phiếu</h3>
+      <div class="glass-card">
+        <div class="market-toolbar">
+          <div class="market-tabs" id="stock-view-tabs">
+            <button class="mk-tab active" data-view="month">Theo tháng (<span class="alloc-month-label"></span>)</button>
+            <button class="mk-tab" data-view="cum">Tổng hợp tới hiện tại</button>
+          </div>
+          <button class="btn-secondary" id="btn-add-stock-row">+ Thêm mã</button>
+        </div>
+        <p class="hint" id="stock-budget-hint"></p>
+        <div class="table-scroll">
+        <table class="data-table" id="table-stock-picker">
+          <thead><tr>
+            <th>Mã CK</th><th>Tên doanh nghiệp</th>
+            <th class="num" id="stock-price-col-head">Giá mua (giá hiện hành)</th>
+            <th class="num">Số tiền</th>
+            <th class="num">Khối lượng</th>
+            <th class="num">Tỷ trọng</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="tbody-stock-picker"></tbody>
+          <tfoot id="tfoot-stock-picker"></tfoot>
+        </table>
+        </div>
+        <div class="confirm-bar" id="stock-confirm-bar">
+          <button class="btn-primary" id="btn-stock-confirm">✓ Xác nhận tháng này</button>
+          <button class="btn-secondary" id="btn-stock-clear">↺ Xoá dữ liệu tháng</button>
+          <span class="confirm-status" id="stock-confirm-status"></span>
+        </div>
+      </div>
+
+      <h3 class="section-title">Vàng & USD</h3>
+      <div class="glass-card">
+        <div class="market-toolbar">
+          <div class="market-tabs" id="goldusd-view-tabs">
+            <button class="mk-tab active" data-view="month">Theo tháng (<span class="alloc-month-label"></span>)</button>
+            <button class="mk-tab" data-view="cum">Tổng hợp tới hiện tại</button>
+          </div>
+        </div>
+        <table class="data-table compact" id="table-gold-usd">
+          <thead><tr>
+            <th>Loại</th>
+            <th class="num" id="gu-price-col-head">Giá mua</th>
+            <th class="num">Số tiền</th>
+            <th class="num">Khối lượng</th>
+            <th>Đơn vị</th>
+            <th class="num">Tỷ trọng</th>
+          </tr></thead>
+          <tbody id="tbody-gold-usd"></tbody>
+        </table>
+        <div class="confirm-bar" id="goldusd-confirm-bar">
+          <button class="btn-primary" id="btn-goldusd-confirm">✓ Xác nhận tháng này</button>
+          <button class="btn-secondary" id="btn-goldusd-clear">↺ Xoá dữ liệu tháng</button>
+          <span class="confirm-status" id="goldusd-confirm-status"></span>
+        </div>
+      </div>
+
+      <h3 class="section-title">Kỳ vọng tăng trưởng tài sản</h3>
+      <div class="glass-card">
+        <div class="market-toolbar">
+          <div class="period-tabs" id="growth-years-tabs">
+            <button class="pd-tab active" data-yr="5">5 năm</button>
+            <button class="pd-tab" data-yr="10">10 năm</button>
+            <button class="pd-tab" data-yr="20">20 năm</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+        <table class="data-table compact" id="table-growth">
+          <thead><tr>
+            <th>Tài sản</th>
+            <th class="num">Tổng giá trị</th>
+            <th class="num">% tăng trưởng/năm</th>
+            <th class="num">Giá trị kỳ vọng</th>
+          </tr></thead>
+          <tbody id="tbody-growth"></tbody>
+        </table>
+        </div>
+        <div class="duo-cards small" style="margin-top:14px">
+          <div class="glass-card">
+            <span class="stat-label">Tổng giá trị kỳ vọng</span>
+            <span class="stat-value-sm green" id="growth-total-expected">0</span>
+          </div>
+          <div class="glass-card">
+            <span class="stat-label">Mức tăng trưởng TB (weighted)</span>
+            <span class="stat-value-sm blue" id="growth-avg-pct">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bảng CK và Overview đặt cuối, song song -->
+      <div class="bottom-grid">
+        <div>
+          <h3 class="section-title">Thị trường chứng khoán</h3>
+          <div class="glass-card">
+            <div class="market-toolbar">
+              <div class="market-tabs" id="market-cat-tabs">
+                <button class="mk-tab active" data-mk="VN30">VN30</button>
+                <button class="mk-tab" data-mk="HNX">HNX</button>
+                <button class="mk-tab" data-mk="VN100">VN100</button>
+              </div>
+              <span class="live-dot" id="stock-live-tag">● Mock</span>
+            </div>
+            <div class="stocks-board-scroll">
+            <table class="data-table compact stocks-board">
+              <thead>
+                <tr>
+                  <th>Mã</th>
+                  <th class="num">Trần</th><th class="num">Sàn</th><th class="num">TC</th>
+                  <th class="num">Khớp</th>
+                  <th class="num">+/−</th><th class="num">%</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-stock-board"></tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="section-title">Tổng quan biến động giá</h3>
+          <div class="glass-card">
+            <div class="market-toolbar">
+              <div class="market-tabs" id="overview-cat-tabs">
+                <button class="mk-tab active" data-cat="currency">Tiền tệ</button>
+                <button class="mk-tab" data-cat="index">Chỉ số</button>
+                <button class="mk-tab" data-cat="gold">Vàng</button>
+                <button class="mk-tab" data-cat="stock">Cổ phiếu</button>
+              </div>
+              <div class="period-tabs" id="overview-period-tabs">
+                <button class="pd-tab active" data-pd="1D">1Ng</button>
+                <button class="pd-tab" data-pd="1W">1T</button>
+                <button class="pd-tab" data-pd="1M">1Th</button>
+                <button class="pd-tab" data-pd="6M">6Th</button>
+                <button class="pd-tab" data-pd="1Y">1N</button>
+                <button class="pd-tab" data-pd="5Y">5N</button>
+                <button class="pd-tab" data-pd="MAX">T.đa</button>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="chart-overview"></canvas></div>
+            <ul class="overview-list" id="overview-list"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ADVICE / KHUYẾN NGHỊ ===== -->
+    <section class="tab" id="tab-advice">
+      <header class="page-header sub">
+        <button class="back-btn" data-jump="dashboard">←</button>
+        <h2>Khuyến nghị cho doanh nghiệp</h2>
+      </header>
+
+      <h3 class="section-title">1. Nhận xét tình hình tài chính &amp; đầu tư</h3>
+      <div class="glass-card">
+        <div class="advice-kpis" id="advice-kpis"></div>
+        <div class="advice-grid">
+          <div class="chart-box"><canvas id="chart-advice-flow"></canvas></div>
+          <div class="chart-box donut-box"><canvas id="chart-advice-alloc"></canvas></div>
+        </div>
+        <ul class="advice-notes" id="advice-notes"></ul>
+      </div>
+
+      <h3 class="section-title">2. Kiến nghị phương án đầu tư &amp; quản lý tài chính</h3>
+      <div class="glass-card">
+        <ul class="advice-reco" id="advice-reco"></ul>
+      </div>
+
+      <h3 class="section-title">3. Kênh hướng dẫn đầu tư &amp; quản lý tài chính</h3>
+      <div class="channel-grid">
+        <a class="channel-card" href="https://www.facebook.com/" target="_blank" rel="noopener">
+          <div class="channel-ic" style="background:linear-gradient(135deg,#1877f2,#0a4db3)">f</div>
+          <div class="channel-meta">
+            <b>Đầu Tư Chứng Khoán Quốc Tế</b>
+            <span>Facebook · Dịch vụ tài chính</span>
+            <small>Giới thiệu cơ hội đầu tư chứng khoán quốc tế và vàng</small>
+          </div>
+        </a>
+        <a class="channel-card" href="https://www.tiktok.com/@thaydatofficial" target="_blank" rel="noopener">
+          <div class="channel-ic" style="background:linear-gradient(135deg,#25f4ee,#fe2c55)">♪</div>
+          <div class="channel-meta">
+            <b>Thầy Đạt Chứng Khoán</b>
+            <span>TikTok · @thaydatofficial</span>
+            <small>Từ kiến thức đến tự do tài chính — Tiến sĩ UK · zalo.me/g/hkypgv444</small>
+          </div>
+        </a>
+        <a class="channel-card" href="https://zalo.me/g/hkypgv444" target="_blank" rel="noopener">
+          <div class="channel-ic" style="background:linear-gradient(135deg,#0068ff,#00a6ff)">Z</div>
+          <div class="channel-meta">
+            <b>AI Trading Bot Cộng đồng</b>
+            <span>Zalo · Nhóm cộng đồng</span>
+            <small>Tham gia nhóm trao đổi chiến lược giao dịch bằng AI</small>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== MODAL: ADD/EDIT TRANSACTION ===== -->
+  <div class="modal-mask" id="modal-mask" hidden>
+    <div class="modal">
+      <header>
+        <h3 id="modal-title">Thêm khoản thu</h3>
+        <button class="modal-close" id="modal-close">✕</button>
+      </header>
+      <form id="form-tx" class="form-vert">
+        <input type="hidden" name="type" id="tx-type" value="income" />
+        <input type="hidden" name="id" id="tx-id" />
+
+        <label>Số tiền
+          <div class="amount-row">
+            <input type="text" inputmode="decimal" name="amount" required placeholder="0" id="tx-amount" autocomplete="off" />
+            <select name="currency" id="tx-currency"></select>
+          </div>
+          <small class="amount-words" id="tx-amount-words"></small>
+        </label>
+
+        <label>Danh mục
+          <div class="cat-row-edit">
+            <select name="category" id="tx-category"></select>
+            <button type="button" class="btn-secondary btn-icon" id="btn-manage-cats" title="Quản lý danh mục">⚙</button>
+          </div>
+          <div class="custom-cat-manager" id="custom-cat-manager" hidden></div>
+        </label>
+
+        <label id="tx-custom-cat-label" hidden>Tên danh mục tuỳ chỉnh
+          <input type="text" name="customCategory" placeholder="Nhập tên danh mục" />
+        </label>
+
+        <label>Tên khoản (gõ tự do hoặc chọn gợi ý)
+          <div class="combobox" id="tx-name-combo">
+            <input type="text" name="name" autocomplete="off" placeholder="VD: Lương, Tiền nhà trọ, Tiền ăn..." required />
+            <button type="button" class="combo-toggle">▾</button>
+            <ul class="combo-list" hidden></ul>
+          </div>
+        </label>
+
+        <label>Mô tả / Ghi chú
+          <input type="text" name="note" placeholder="(tuỳ chọn)" />
+        </label>
+
+        <label>Ngày
+          <input type="date" name="date" required />
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="modal-cancel">Huỷ</button>
+          <button type="submit" class="btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: STOCK PICKER ===== -->
+  <div class="modal-mask" id="stock-modal-mask" hidden>
+    <div class="modal modal-wide">
+      <header>
+        <h3>Chọn mã cổ phiếu</h3>
+        <button class="modal-close" id="stock-modal-close">✕</button>
+      </header>
+      <div class="stock-picker-tabs">
+        <button class="mk-tab active" data-spt="HOSE">HOSE</button>
+        <button class="mk-tab" data-spt="VN30">VN30</button>
+        <button class="mk-tab" data-spt="VN100">VN100</button>
+      </div>
+      <input type="text" id="stock-search" placeholder="🔍 Tìm theo mã hoặc tên..." />
+      <ul class="stock-pick-list" id="stock-pick-list"></ul>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: COLLAB & HISTORY ===== -->
+  <div class="modal-mask" id="collab-mask" hidden>
+    <div class="modal modal-wide">
+      <header>
+        <h3>Cộng tác &amp; Lịch sử chỉnh sửa</h3>
+        <button class="modal-close" id="collab-close">✕</button>
+      </header>
+
+      <div class="collab-acc-bar">
+        <div>
+          <span class="acc-label">Tài khoản hiện tại</span>
+          <b id="collab-acc-name">—</b>
+        </div>
+        <div class="collab-acc-actions">
+          <button class="btn-secondary" id="btn-rename-account">✎ Đổi tên</button>
+          <button class="btn-danger" id="btn-delete-account">🗑 Xoá tài khoản</button>
+        </div>
+      </div>
+
+      <p class="hint" style="margin:6px 0 12px">Nhiều người có thể dùng chung 1 tài khoản: đổi "Tên người dùng" ở thanh bên rồi thao tác — mọi thay đổi được ghi lại kèm tên. (Bản demo lưu cục bộ trên thiết bị này.)</p>
+
+      <div class="collab-grid">
+        <div>
+          <div class="collab-subhead">
+            <h4>Lịch sử chỉnh sửa</h4>
+            <select id="history-filter"><option value="">Tất cả người dùng</option></select>
+          </div>
+          <ul class="history-list" id="history-list"></ul>
+        </div>
+        <div>
+          <h4>Bình luận</h4>
+          <ul class="comment-list" id="comment-list"></ul>
+          <div class="comment-box">
+            <input type="text" id="comment-input" placeholder="Viết bình luận..." />
+            <button class="btn-primary" id="btn-add-comment">Gửi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/currency.js"></script>
+  <script src="js/combobox.js"></script>
+  <script src="js/stocks-data.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
